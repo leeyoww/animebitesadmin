@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Admin Orders</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      #orders-list {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      #deliveries-list {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .order-item {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+      }
+
+      .delivery-button {
+        background-color: #4CAF50;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+      }
+
+      .delivery-button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Admin Orders</h1>
+
+    <h2>Orders to Deliver</h2>
+    <div id="orders-list">
+      <!-- Order data will be displayed here -->
+    </div>
+
+    <h2>Delivered Orders</h2>
+    <div id="deliveries-list">
+      <!-- Delivery data will be displayed here -->
+    </div>
+
+    <script type="module">
+      // Initialize Firebase (use your Firebase configuration)
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
+      import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBfPdkDg0TE9nypjCr9WDjHsDG6IGH2jLs",
+  authDomain: "e-deez-nuts.firebaseapp.com",
+  databaseURL: "https://e-deez-nuts-default-rtdb.firebaseio.com",
+  projectId: "e-deez-nuts",
+  storageBucket: "e-deez-nuts.appspot.com",
+  messagingSenderId: "697154537749",
+  appId: "1:697154537749:web:f837eccbd4d244871f011c",
+  measurementId: "G-PNJHWV1S79"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      const ordersList = document.getElementById('orders-list');
+      const deliveriesList = document.getElementById('deliveries-list');
+
+      // Function to fetch and display orders
+      async function fetchOrders() {
+        try {
+          const querySnapshot = await getDocs(collection(db, 'orders'));
+          ordersList.innerHTML = ''; // Clear previous data
+
+          querySnapshot.forEach((doc) => {
+            const orderData = doc.data();
+            const orderItem = document.createElement('div');
+            orderItem.classList.add('order-item');
+            orderItem.innerHTML = `
+              <p>Name: ${orderData.customerName}</p>
+              <p>Address: ${orderData.customerAddress}</p>
+              <p>Phone: ${orderData.customerPhone}</p>
+              <p>Flavor: ${orderData.flavor}</p>
+              <p>Topping: ${orderData.topping}</p>
+              <p>Quantity: ${orderData.quantity}</p>
+              <p>Total: ₱${orderData.total}</p>
+              <button class="delivery-button" data-order-id="${doc.id}">Delivery Confirmed</button>
+            `;
+            ordersList.appendChild(orderItem);
+
+            // Add event listener for the "Delivery Confirmed" button
+            const deliveryButton = orderItem.querySelector('.delivery-button');
+            deliveryButton.addEventListener('click', () => confirmDelivery(doc.id, orderData));
+          });
+        } catch (error) {
+          console.error('Error fetching orders: ', error);
+          ordersList.innerHTML = 'Error fetching orders. Please try again.';
+        }
+      }
+
+      // Function to confirm delivery and move the order to the 'deliveries' collection
+      async function confirmDelivery(orderId, orderData) {
+        try {
+          // Copy the order to the 'deliveries' collection
+          await addDoc(collection(db, 'deliveries'), orderData);
+
+          // Delete the order from the 'orders' collection
+          await deleteDoc(doc(db, 'orders', orderId));
+
+          fetchOrders(); // Refresh the order list after confirmation
+          fetchDeliveries(); // Refresh the deliveries list
+        } catch (error) {
+          console.error('Error confirming delivery: ', error);
+          alert('Error confirming delivery. Please try again.');
+        }
+      }
+
+      // Function to fetch and display deliveries
+      async function fetchDeliveries() {
+        try {
+          const querySnapshot = await getDocs(collection(db, 'deliveries'));
+          deliveriesList.innerHTML = ''; // Clear previous data
+
+          querySnapshot.forEach((doc) => {
+            const deliveryData = doc.data();
+            const deliveryItem = document.createElement('div');
+            deliveryItem.classList.add('order-item');
+            deliveryItem.innerHTML = `
+              <p>Name: ${deliveryData.customerName}</p>
+              <p>Address: ${deliveryData.customerAddress}</p>
+              <p>Phone: ${deliveryData.customerPhone}</p>
+              <p>Flavor: ${deliveryData.flavor}</p>
+              <p>Topping: ${deliveryData.topping}</p>
+              <p>Quantity: ${deliveryData.quantity}</p>
+              <p>Total: ₱${deliveryData.total}</p>
+            `;
+            deliveriesList.appendChild(deliveryItem);
+          });
+        } catch (error) {
+          console.error('Error fetching deliveries: ', error);
+          deliveriesList.innerHTML = 'Error fetching deliveries. Please try again.';
+        }
+      }
+
+      // Fetch and display orders and deliveries on page load
+      fetchOrders();
+      fetchDeliveries();
+    </script>
+  </body>
+</html>
